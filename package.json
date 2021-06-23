@@ -1,0 +1,36 @@
+{
+	"private": true,
+	"bin": {
+		"portship": "./cli.mjs"
+	},
+	"scripts": {
+		"format": "prettier --write .",
+		"format:staged": "pretty-quick --staged"
+	},
+	"git": {
+		"pre-commit": [
+			"format:staged"
+		]
+	},
+	"prettier": {
+		"useTabs": true,
+		"semi": true,
+		"singleQuote": true,
+		"jsxSingleQuote": false,
+		"trailingComma": "none",
+		"jsxBracketSameLine": false,
+		"arrowParens": "avoid",
+		"requirePragma": false,
+		"insertPragma": false,
+		"endOfLine": "lf"
+	},
+	"dependencies": {
+		"@vercel/git-hooks": "1.0.0",
+		"arg": "5.0.0",
+		"kaitai-struct": "0.9.0",
+		"kaitai-struct-compiler": "0.9.0",
+		"prettier": "2.3.1",
+		"pretty-quick": "3.1.1",
+		"yaml": "1.10.2"
+	}
+}
