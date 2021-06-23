@@ -435,10 +435,10 @@ class Ninjafile {
 								`implicit dependency cannot be symbol: ${imdep}`
 							);
 						implicitDeps.push(imdep);
-						yield yimdep;
+						yield imdep;
 					}
 
-					return;
+					continue;
 				}
 
 				yield arg;
@@ -506,9 +506,20 @@ const cc = ninja.addRule('cc', {
 	description: `Compile $out`
 });
 
-cc({
+const extractExe = cc({
 	in: S`./src/extract.c`,
 	out: O`./extract`
+});
+
+const extract = ninja.addRule('extract', {
+	command: [
+		extractExe,
+		Symbol('in'),
+		Symbol('offset'),
+		Symbol('length'),
+		Symbol('out')
+	],
+	description: `Extract $out from $in ($offset:$length)`
 });
 
 await ninja.writeTo(O`./`, path.resolve(args._[0]));
