@@ -1,5 +1,5 @@
 meta:
-  id: rose_log
+  id: rose_lod
   file-extension: lod
   endian: le
 seq:
