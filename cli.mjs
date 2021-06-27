@@ -579,48 +579,37 @@ const compileFormat_ = ninja.addRule('compile-format', {
 const compileFormat = (name, id, format = 'cpp_stl', ...exts) =>
 	compileFormat_({
 		in: S`./src/format/${name}.ksy`,
-		out: exts.map(ext => O`./format/${id}${ext}`),
-		out_dir: O`./format`,
+		out: exts.map(ext => O`./Assets/Script/ROSE/Format/${id}${ext}`),
+		out_dir: O`./Assets/Script/ROSE/Format`,
 		lang: format
 	});
 
-const zmsSrc = compileFormat('ZMS', 'rose_zms', 'cpp_stl', '.h', '.cpp');
+compileFormat('AIP', 'RoseAip', 'csharp', '.cs');
+compileFormat('CHR', 'RoseChr', 'csharp', '.cs');
+compileFormat('HIM', 'RoseHim', 'csharp', '.cs');
+compileFormat('IFO', 'RoseIfo', 'csharp', '.cs');
+compileFormat('LIT', 'RoseLit', 'csharp', '.cs');
+compileFormat('LOD', 'RoseLod', 'csharp', '.cs');
+compileFormat('MOV', 'RoseMov', 'csharp', '.cs');
+compileFormat('ZMS', 'RoseZms', 'csharp', '.cs');
+compileFormat('ZON', 'RoseZon', 'csharp', '.cs');
 
-const zmsToObjConverter = cxx({
-	in: [
-		zmsSrc.filter(/\.(cc|cxx|cpp|c)$/i),
-		S`./src/zms-to-obj.cc`,
-		S`./src/kaitai_struct_cpp_stl_runtime/kaitai/kaitaistream.cpp`
-	],
-	out: O`./zms-to-obj`,
-	cflags: [
-		`-I${O`./`}`,
-		`-I${S`./src/kaitai_struct_cpp_stl_runtime`}`,
-		'-Wno-unused-parameter',
-		'-Wno-sign-compare',
-		'-DKS_STR_ENCODING_NONE'
-	]
-});
-
-const zmsToObj = ninja.addRule('zms-to-obj', {
-	command: [zmsToObjConverter, Symbol('in'), Symbol('out')],
-	description: `ZMS -> OBJ: $in`
-});
+copy(
+	S`./src/kaitai_struct_csharp_runtime/KaitaiStream.cs`,
+	O`./Assets/Script/ROSE/KaitaiStream.cs`
+);
+copy(
+	S`./src/kaitai_struct_csharp_runtime/KaitaiStruct.cs`,
+	O`./Assets/Script/ROSE/KaitaiStruct.cs`
+);
 
 for (const file of vfs.walk(/\.zms$/i)) {
-	zmsToObj({
-		in: O`./raw/${file.filepath}`,
-		out: O`./unity/Assets/Rose/Models/${file.asExt('.obj')}`
+	extract({
+		in: file.archive.filepath,
+		out: O`./Assets/ROSE/${file.filepath}`,
+		length: file.length,
+		offset: file.offset
 	});
 }
-
-//for (const file of vfs.walkAll()) {
-//	extract({
-//		in: file.archive.filepath,
-//		out: O`./raw/${file.filepath}`,
-//		length: file.length,
-//		offset: file.offset
-//	});
-//}
 
 await ninja.writeTo(O`./`, path.resolve(args._[0]));

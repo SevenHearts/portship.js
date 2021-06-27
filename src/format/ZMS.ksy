@@ -8,7 +8,7 @@ seq:
   - id: version
     type: u4
     enum: zms_version
-  - id: vertex_format
+  - id: format
     type: u4
     enum: vertex_format
   - id: min_bounds
@@ -39,47 +39,47 @@ types:
         type: i_vec3
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::position.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::position.to_i)
       - id: vert_normals
         type: i_vec3
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::normal.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::normal.to_i)
       - id: vert_colors
         type: i_rgba
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::color.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::color.to_i)
       - id: vert_bones
         type: bone_v6
         repeat: expr
         repeat-expr: vert_count
-        if: (_parent.vertex_format.to_i & (vertex_format::boneindices.to_i | vertex_format::boneweights.to_i)) == (vertex_format::boneindices.to_i | vertex_format::boneweights.to_i)
+        if: (_parent.format.to_i & (vertex_format::boneindices.to_i | vertex_format::boneweights.to_i)) == (vertex_format::boneindices.to_i | vertex_format::boneweights.to_i)
       - id: vert_tangents
         type: i_vec3
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::tangent.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::tangent.to_i)
       - id: vert_uv1coords
         type: i_vec2
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::uvmap1.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::uvmap1.to_i)
       - id: vert_uv2coords
         type: i_vec2
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::uvmap2.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::uvmap2.to_i)
       - id: vert_uv3coords
         type: i_vec2
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::uvmap3.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::uvmap3.to_i)
       - id: vert_uv4coords
         type: i_vec2
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::uvmap4.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::uvmap4.to_i)
       - id: face_count
         type: u4
       - id: faces
@@ -162,47 +162,47 @@ types:
         type: vec3
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::position.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::position.to_i)
       - id: vert_normals
         type: vec3
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::normal.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::normal.to_i)
       - id: vert_colors
         type: rgba
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::color.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::color.to_i)
       - id: vert_bones
         type: vert_bone
         repeat: expr
         repeat-expr: vert_count
-        if: (_parent.vertex_format.to_i & (vertex_format::boneindices.to_i | vertex_format::boneweights.to_i)) == (vertex_format::boneindices.to_i | vertex_format::boneweights.to_i)
+        if: (_parent.format.to_i & (vertex_format::boneindices.to_i | vertex_format::boneweights.to_i)) == (vertex_format::boneindices.to_i | vertex_format::boneweights.to_i)
       - id: vert_tangents
         type: vec3
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::tangent.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::tangent.to_i)
       - id: vert_uv1coords
         type: vec2
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::uvmap1.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::uvmap1.to_i)
       - id: vert_uv2coords
         type: vec2
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::uvmap2.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::uvmap2.to_i)
       - id: vert_uv3coords
         type: vec2
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::uvmap3.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::uvmap3.to_i)
       - id: vert_uv4coords
         type: vec2
         repeat: expr
         repeat-expr: vert_count
-        if: 0 != (_parent.vertex_format.to_i & vertex_format::uvmap4.to_i)
+        if: 0 != (_parent.format.to_i & vertex_format::uvmap4.to_i)
       - id: face_count
         type: u2
       - id: faces
