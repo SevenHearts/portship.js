@@ -593,6 +593,7 @@ compileFormat('LOD', 'RoseLod', 'csharp', '.cs');
 compileFormat('MOV', 'RoseMov', 'csharp', '.cs');
 compileFormat('ZMS', 'RoseZms', 'csharp', '.cs');
 compileFormat('ZON', 'RoseZon', 'csharp', '.cs');
+compileFormat('ZSC', 'RoseZsc', 'csharp', '.cs');
 
 copy(
 	S`./src/kaitai_struct_csharp_runtime/KaitaiStream.cs`,
@@ -603,7 +604,14 @@ copy(
 	O`./Assets/Script/ROSE/KaitaiStruct.cs`
 );
 
-for (const file of vfs.walk(/\.zms$/i)) {
+let alreadyZsc = false;
+
+for (const file of vfs.walk(/\.(zms|zsc)$/i)) {
+	if (file.filepath.match(/\.zsc$/i)) {
+		if (alreadyZsc) continue;
+		alreadyZsc = true;
+	}
+
 	extract({
 		in: file.archive.filepath,
 		out: O`./Assets/ROSE/${file.filepath}`,
