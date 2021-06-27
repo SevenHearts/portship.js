@@ -5,15 +5,17 @@ import { URL, fileURLToPath } from 'url';
 import path from 'path';
 
 import arg from 'arg';
-import YAML from 'yaml';
-import KaitaiStructCompiler from 'kaitai-struct-compiler';
-import { KaitaiStream } from 'kaitai-struct';
+
+import { importFormat } from './src/formats.mjs';
 
 const args = arg({
 	'--help': Boolean,
 
 	'--out-dir': String,
-	'-o': '--out-dir'
+	'-o': '--out-dir',
+
+	'--cc': String,
+	'--cxx': String
 });
 
 if (
@@ -35,48 +37,12 @@ if (
      --out-dir, -o path      output directory
 
      --cc path               path to C compiler
+                             (default: cc)
+
+     --cxx path              path to C++ compiler
+                             (default: c++)
 `);
 	process.exit(2);
-}
-
-const kaitaiCompiler = new KaitaiStructCompiler();
-
-export async function importFormat(name) {
-	const filepath = new URL(
-		path.join('./src/format', name + '.ksy'),
-		import.meta.url
-	);
-
-	function kaitaiRequire(what) {
-		switch (what) {
-			case 'kaitai-struct/KaitaiStream':
-				return KaitaiStream;
-			default:
-				throw new Error(
-					`kaitai struct class attempted to require something unexpected: ${what}`
-				);
-		}
-	}
-
-	const contents = await fsp.readFile(filepath, 'utf-8');
-	const spec = YAML.parse(contents);
-
-	const files = await kaitaiCompiler.compile('javascript', spec, null, false);
-
-	// This is a bit of a hack. But it works.
-	if (Object.keys(files).length !== 1) {
-		// Should never happen.
-		throw new Error('kaitai compiler produced too many/too little files!');
-	}
-
-	const parserModule = { exports: {} };
-
-	new Function('require', 'module', files[Object.keys(files)[0]])(
-		kaitaiRequire,
-		parserModule
-	);
-
-	return buf => new parserModule.exports(new KaitaiStream(buf));
 }
 
 const parseIDX = await importFormat('IDX');
@@ -145,6 +111,13 @@ class VFSFile {
 		return path.extname(this.name);
 	}
 
+	asExt(newExt) {
+		return path.join(
+			path.dirname(this.filepath),
+			path.basename(this.filepath, this.ext) + newExt
+		);
+	}
+
 	isFile() {
 		return true;
 	}
@@ -158,6 +131,9 @@ export default class VFS {
 		this.root = new VFSDirectory({ name: null, parent: null });
 
 		for (const meta of idx.vfsMeta) {
+			// Skip over the pseudo-path ROOT.VFS.
+			if (meta.path.data.toLowerCase() === 'root.vfs') continue;
+
 			const archive = new Archive({
 				filepath: path.join(rootDir, meta.path.data)
 			});
@@ -308,6 +284,22 @@ class Ninjafile {
 		this.build = [];
 	}
 
+	static transformVal(val) {
+		if (!Array.isArray(val)) val = [val];
+
+		function* genAll() {
+			for (const v of val) {
+				if (typeof v === 'object' && Ninjafile.RULE in v) {
+					yield* v[Ninjafile.RULE];
+				} else {
+					yield v;
+				}
+			}
+		}
+
+		return [...genAll()];
+	}
+
 	*generate(outDir, idxPath) {
 		if (!path.isAbsolute(outDir))
 			throw new Error(`outDir must be absolute: ${outDir}`);
@@ -361,9 +353,8 @@ class Ninjafile {
 			process.execPath
 		} ${fileURLToPath(import.meta.url)} -o $outdir $idxfile\n`;
 		yield `  generator = 1\n`;
-		yield `  description = 'Re-generating Portship configuration: $idxfile'\n`;
+		yield `  description = Re-generating Portship configuration: $idxfile\n`;
 		yield `\n`;
-		//		yield esc`build ${path.join(outDir, 'build.ninja')}: generate ${idxPath} ${fileURLToPath(import.meta.url)}\n`
 		yield esc`build build.ninja: generate | ${idxPath} ${fileURLToPath(
 			import.meta.url
 		)}\n`;
@@ -390,11 +381,16 @@ class Ninjafile {
 			yield `\n`;
 		}
 
-		for (const [rule, opts] of this.build) {
-			yield esc`build ${opts.get('out')}: ${rule} ${opts.get('in')}\n`;
+		for (const [rule, opts, impdefs] of this.build) {
+			const impdefline = impdefs.length === 0 ? '' : esc` | ${impdefs}`;
+			yield esc`build ${opts.get('out')}: ${rule} ${opts.get('in')}` +
+				impdefline +
+				'\n';
 
 			for (const [name, value] of opts.entries()) {
-				yield `  ${esc`${name}`} = ${cmd`${value}`}\n`;
+				if (name !== 'in' && name !== 'out') {
+					yield `  ${esc`${name}`} = ${cmd`${value}`}\n`;
+				}
 			}
 
 			yield `\n`;
@@ -453,13 +449,26 @@ class Ninjafile {
 
 		const rule = new Map([
 			['command', command],
-			['options', new Map(Object.entries(opts))]
+			[
+				'options',
+				new Map(
+					Object.entries(opts).map(([key, val]) => [
+						key,
+						Ninjafile.transformVal(val)
+					])
+				)
+			]
 		]);
 
 		this.rule.set(name, rule);
 
 		const result = ({ ...opts }) => {
-			const optMap = new Map(Object.entries(opts));
+			const optMap = new Map(
+				Object.entries(opts).map(([key, val]) => [
+					key,
+					Ninjafile.transformVal(val)
+				])
+			);
 
 			for (const reqArg of vars) {
 				if (!optMap.has(reqArg)) {
@@ -469,14 +478,24 @@ class Ninjafile {
 				}
 			}
 
-			this.build.push([name, optMap]);
+			this.build.push([name, optMap, implicitDeps]);
 
-			return {
+			const makeRuleRecord = list => ({
 				get [Ninjafile.RULE]() {
-					const out = optMap.get('out');
+					const out = list;
 					return Array.isArray(out) ? out : [out];
+				},
+
+				filter(filt) {
+					return makeRuleRecord(
+						typeof filt === 'string'
+							? this[Ninjafile.RULE].filter(x => x.endsWith(filt))
+							: this[Ninjafile.RULE].filter(x => x.match(filt))
+					);
 				}
-			};
+			});
+
+			return makeRuleRecord(optMap.get('out'));
 		};
 
 		return result;
@@ -506,6 +525,29 @@ const cc = ninja.addRule('cc', {
 	description: `Compile $out`
 });
 
+const cxx = ninja.addRule('cxx', {
+	command: [
+		args['--cxx'] || 'c++',
+		'-o',
+		Symbol('out'),
+		'-Wall',
+		'-Wextra',
+		'-Werror',
+		'-Wshadow',
+		'-std=c++17',
+		Symbol('cflags'),
+		Symbol('in')
+	],
+	description: `Compile $out`
+});
+
+const copy_ = ninja.addRule('copy', {
+	command: ['cp', Symbol('in'), Symbol('out')],
+	description: `Copy: $out`
+});
+
+const copy = (from, to) => copy_({ in: from, out: to });
+
 const extractExe = cc({
 	in: S`./src/extract.c`,
 	out: O`./extract`
@@ -521,5 +563,64 @@ const extract = ninja.addRule('extract', {
 	],
 	description: `Extract $out from $in ($offset:$length)`
 });
+
+const compileFormat_ = ninja.addRule('compile-format', {
+	command: [
+		process.execPath,
+		S`./src/compile-format.mjs`,
+		Symbol('in'),
+		Symbol('out_dir'),
+
+		Symbol('lang')
+	],
+	description: `Compile Kaitai format: $in`
+});
+
+const compileFormat = (name, id, format = 'cpp_stl', ...exts) =>
+	compileFormat_({
+		in: S`./src/format/${name}.ksy`,
+		out: exts.map(ext => O`./format/${id}${ext}`),
+		out_dir: O`./format`,
+		lang: format
+	});
+
+const zmsSrc = compileFormat('ZMS', 'rose_zms', 'cpp_stl', '.h', '.cpp');
+
+const zmsToObjConverter = cxx({
+	in: [
+		zmsSrc.filter(/\.(cc|cxx|cpp|c)$/i),
+		S`./src/zms-to-obj.cc`,
+		S`./src/kaitai_struct_cpp_stl_runtime/kaitai/kaitaistream.cpp`
+	],
+	out: O`./zms-to-obj`,
+	cflags: [
+		`-I${O`./`}`,
+		`-I${S`./src/kaitai_struct_cpp_stl_runtime`}`,
+		'-Wno-unused-parameter',
+		'-Wno-sign-compare',
+		'-DKS_STR_ENCODING_NONE'
+	]
+});
+
+const zmsToObj = ninja.addRule('zms-to-obj', {
+	command: [zmsToObjConverter, Symbol('in'), Symbol('out')],
+	description: `ZMS -> OBJ: $in`
+});
+
+for (const file of vfs.walk(/\.zms$/i)) {
+	zmsToObj({
+		in: O`./raw/${file.filepath}`,
+		out: O`./unity/Assets/Rose/Models/${file.asExt('.obj')}`
+	});
+}
+
+//for (const file of vfs.walkAll()) {
+//	extract({
+//		in: file.archive.filepath,
+//		out: O`./raw/${file.filepath}`,
+//		length: file.length,
+//		offset: file.offset
+//	});
+//}
 
 await ninja.writeTo(O`./`, path.resolve(args._[0]));
