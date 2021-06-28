@@ -5,7 +5,7 @@ using UnityEngine;
 using System.IO;
 using Kaitai;
 
-[ScriptedImporter(1, "zms")]
+[ScriptedImporter(1, "zms", AllowCaching = true)]
 public class ZMSImporter : ScriptedImporter
 {
     public override void OnImportAsset(AssetImportContext ctx)
