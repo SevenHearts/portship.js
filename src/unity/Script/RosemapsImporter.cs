@@ -23,6 +23,8 @@ public class RosemapsImporter : ScriptedImporter
             public string designation;
             public string objectTable;
             public string constructionTable;
+            public int startX;
+            public int startY;
         }
 
         public RoseMap[] stb;
@@ -43,6 +45,10 @@ public class RosemapsImporter : ScriptedImporter
         var dedupe = new SortedDictionary<string, int>();
 
         var enabledNamesSet = new SortedSet<string>(importNames);
+
+        string terrainMaterialPath = "Assets/Material/ROSE/ROSETerrain.mat";
+        ctx.DependsOnArtifact(terrainMaterialPath);
+        Material terrainMaterial = AssetDatabase.LoadAssetAtPath<Material>(terrainMaterialPath);
 
         foreach (STB.RoseMap mapDef in stb.stb)
         {
@@ -100,8 +106,25 @@ public class RosemapsImporter : ScriptedImporter
                     }
                 }
 
+                // Extract some of the basic info from the ZON file
+                var heightmapOffset = new Vector2();
+                foreach (var zonBlock in zon.Blocks)
+                {
+                    switch (zonBlock.Id)
+                    {
+                        case RoseZon.ZoneBlock.BlockType.BasicInfo:
+                            {
+                                var info = (RoseZon.ZoneBlock.BlockBasicInfo)zonBlock.Data;
+                                heightmapOffset.x = (float)info.XCount;
+                                heightmapOffset.y = (float)info.YCount;
+                                break;
+                            }
+                    }
+                }
+
                 // Enumerate all of the tiles that 'might' exist.
                 var ifoTiles = new SortedDictionary<Vector2Int, RoseIfo>(new Vector2IntComparer());
+                var himTiles = new SortedDictionary<Vector2Int, Mesh>(new Vector2IntComparer());
 
                 string[] foundTiles = AssetDatabase.FindAssets("_", new string[] { Path.GetDirectoryName(zoneFile) });
                 foreach (string found in foundTiles)
@@ -119,8 +142,15 @@ public class RosemapsImporter : ScriptedImporter
 
                     if (Path.GetExtension(foundPath) == ".ifo")
                     {
+                        var tileCoord = new Vector2Int(x, y);
+
                         ctx.DependsOnSourceAsset(foundPath);
-                        ifoTiles[new Vector2Int(x, y)] = RoseIfo.FromFile(foundPath);
+                        ifoTiles[tileCoord] = RoseIfo.FromFile(foundPath);
+
+                        var himPath = Path.ChangeExtension(foundPath, ".him");
+                        ctx.DependsOnArtifact(himPath);
+                        Object[] himobjs = AssetDatabase.LoadAllAssetsAtPath(himPath);
+                        himTiles[tileCoord] = (Mesh)himobjs[0];
                     }
                 }
 
@@ -130,12 +160,33 @@ public class RosemapsImporter : ScriptedImporter
                     continue;
                 }
 
+                var heightMapRoot = new GameObject(mapObject.name + ".height");
+                heightMapRoot.transform.parent = mapObject.transform;
+
                 foreach (var tileCoord in ifoTiles.Keys)
                 {
                     var ifo = ifoTiles[tileCoord];
                     var tileObject = new GameObject(id + " " + tileCoord.x.ToString() + "_" + tileCoord.y.ToString());
 
                     tileObject.transform.parent = mapObject.transform;
+
+                    // Make the heightmap gameobject
+                    {
+                        var heightObject = new GameObject(tileObject.name + ".heightmap");
+                        heightObject.transform.parent = heightMapRoot.transform;
+
+                        var meshFilter = heightObject.AddComponent<MeshFilter>();
+                        meshFilter.mesh = himTiles[tileCoord];
+
+                        var meshRenderer = heightObject.AddComponent<MeshRenderer>();
+                        meshRenderer.sharedMaterial = terrainMaterial;
+
+                        heightObject.transform.position = new Vector3(
+                            (tileCoord.x - heightmapOffset.x) * 160f,
+                            0,
+                            (tileCoord.y - heightmapOffset.y) * 160f
+                        );
+                    }
 
                     var ents = 0;
                     foreach (var ifoBlock in ifo.Blocks)
