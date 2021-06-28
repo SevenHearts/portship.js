@@ -106,9 +106,9 @@ types:
               - id: obj_id
                 type: u4
               - id: map_pos_x
-                type: u4
+                type: s4
               - id: map_pos_y
-                type: u4
+                type: s4
               - id: rotation
                 type: quaternion
               - id: position

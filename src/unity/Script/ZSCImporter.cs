@@ -6,9 +6,11 @@ using UnityEngine;
 [ScriptedImporter(1, "zsc", AllowCaching = true)]
 public class ZCSImporter : ScriptedImporter
 {
-    private static Material loadMaterial(string name)
+    private static Material loadMaterial(AssetImportContext ctx, string name)
     {
-        Material material = AssetDatabase.LoadAssetAtPath<Material>("Assets/Material/ROSE/" + name + ".mat");
+        string fullPath = "Assets/Material/ROSE/" + name + ".mat";
+        ctx.DependsOnArtifact(fullPath);
+        Material material = AssetDatabase.LoadAssetAtPath<Material>(fullPath);
         if (material == null)
         {
             throw new System.Exception("Could not find ROSE Generic material: Assets/Material/ROSE/" + name + ".mat");
@@ -21,8 +23,6 @@ public class ZCSImporter : ScriptedImporter
         string[] leafs = ctx.assetPath.Split('/');
         string name = leafs[leafs.Length - 1];
 
-        GameObject g = new GameObject(name);
-
         RoseZsc zsc = RoseZsc.FromFile(ctx.assetPath);
         Mesh[] meshes = new Mesh[zsc.MeshCount];
 
@@ -31,6 +31,7 @@ public class ZCSImporter : ScriptedImporter
             foreach (string meshPath in zsc.MeshPaths)
             {
                 string meshPathClean = "Assets/ROSE/" + meshPath.Replace('\\', '/');
+                ctx.DependsOnArtifact(meshPathClean);
                 Mesh mesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPathClean);
 
                 if (mesh == null)
@@ -51,6 +52,7 @@ public class ZCSImporter : ScriptedImporter
             foreach (var mat in materials)
             {
                 string matPath = "Assets/ROSE/" + mat.Path.ToLower().Substring(0, mat.Path.Length - 4).Replace('\\', '/') + ".png";
+                ctx.DependsOnArtifact(matPath);
                 Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(matPath);
 
                 if (texture == null)
@@ -70,7 +72,7 @@ public class ZCSImporter : ScriptedImporter
                     matName += (mat.AlphaTestEnabled != 0) ? "T" : "A";
                 }
 
-                roseMaterials[id] = loadMaterial(matName);
+                roseMaterials[id] = loadMaterial(ctx, matName);
                 textures[id] = texture;
             }
         }
@@ -81,10 +83,9 @@ public class ZCSImporter : ScriptedImporter
             foreach (var objDef in zsc.Objects)
             {
                 var outer_id = outer_i++;
-                if (objDef.MeshCount == 0) continue;
-
                 GameObject child = new GameObject(outer_id.ToString());
-                child.transform.parent = g.transform;
+                ctx.AddObjectToAsset(outer_id.ToString(), child);
+                if (objDef.MeshCount == 0) continue;
 
                 var inner_i = 0;
                 var parents = new ushort[objDef.MeshCount];
@@ -94,7 +95,7 @@ public class ZCSImporter : ScriptedImporter
                 foreach (var meshDef in objDef.Meshes)
                 {
                     var inner_id = inner_i++;
-                    GameObject meshObject = new GameObject(inner_id.ToString());
+                    GameObject meshObject = new GameObject(outer_id.ToString() + "." + inner_id.ToString());
                     meshObjects[inner_i] = meshObject;
 
                     var matDef = materials[meshDef.MaterialId];
@@ -174,8 +175,5 @@ public class ZCSImporter : ScriptedImporter
                 }
             }
         }
-
-        ctx.AddObjectToAsset("main obj", g);
-        ctx.SetMainObject(g);
     }
 }

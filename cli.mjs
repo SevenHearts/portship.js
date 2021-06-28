@@ -588,12 +588,24 @@ const extractConvert = ninja.addRule('extract-convert', {
 	command: [
 		S`./src/extract-convert.sh`,
 		extractExe,
-		Symbol('in'),
+		Symbol('archive'),
 		Symbol('offset'),
 		Symbol('length'),
 		Symbol('out')
 	],
 	description: `Extract+DDS->PNG: $out from $in ($offset:$length)`
+});
+
+const extractSTB = ninja.addRule('extract-stb', {
+	command: [
+		S`./src/extract-stb.sh`,
+		extractExe,
+		Symbol('archive'),
+		Symbol('offset'),
+		Symbol('length'),
+		Symbol('out')
+	],
+	description: `Extract+STB->JSON: $out from $in ($offset:$length)`
 });
 
 compileFormat('AIP', 'RoseAip', 'csharp', '.cs');
@@ -616,14 +628,42 @@ copy(
 	O`./Assets/Script/ROSE/KaitaiStruct.cs`
 );
 
-for (const file of vfs.walk(/\.(zms|zsc|dds)$/i)) {
+for (const file of vfs.walk(/\.(zms|zsc|dds|stb|zon|ifo)$/i)) {
 	if (file.filepath.endsWith('.dds')) {
 		extractConvert({
-			in: file.archive.filepath,
-			out: `./Assets/ROSE/${file.asExt('.png')}`,
+			in: [file.archive.filepath, S`./src/extract-convert.sh`],
+			archive: file.archive.filepath,
+			out: O`./Assets/ROSE/${file.asExt('.png')}`,
 			length: file.length,
 			offset: file.offset
 		});
+		continue;
+	}
+
+	if (file.filepath.endsWith('.stb')) {
+		let ext;
+
+		const name = path.basename(file.filepath, '.stb');
+		switch (name) {
+			case 'list_zone':
+				ext = '.rosemaps';
+				break;
+			default:
+				continue;
+		}
+
+		extractSTB({
+			in: [
+				file.archive.filepath,
+				S`./src/extract-stb.sh`,
+				S`./src/convert-stb.mjs`
+			],
+			archive: file.archive.filepath,
+			length: file.length,
+			offset: file.offset,
+			out: O`./Assets/ROSE/${file.asExt(ext)}`
+		});
+
 		continue;
 	}
 

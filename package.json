@@ -25,12 +25,16 @@
 		"endOfLine": "lf"
 	},
 	"dependencies": {
-		"@vercel/git-hooks": "1.0.0",
 		"arg": "5.0.0",
+		"camelcase": "6.2.0",
+		"get-stdin": "9.0.0",
 		"kaitai-struct": "0.9.0",
 		"kaitai-struct-compiler": "0.9.0",
-		"prettier": "2.3.1",
-		"pretty-quick": "3.1.1",
 		"yaml": "1.10.2"
+	},
+	"devDependencies": {
+		"@vercel/git-hooks": "1.0.0",
+		"prettier": "2.3.1",
+		"pretty-quick": "3.1.1"
 	}
 }
