@@ -628,7 +628,7 @@ copy(
 	O`./Assets/Script/ROSE/KaitaiStruct.cs`
 );
 
-for (const file of vfs.walk(/\.(zms|zsc|dds|stb|zon|ifo|him)$/i)) {
+for (const file of vfs.walk(/\.(zms|zsc|dds|stb|zon|ifo|him|til)$/i)) {
 	if (file.filepath.endsWith('.dds')) {
 		extractConvert({
 			in: [file.archive.filepath, S`./src/extract-convert.sh`],

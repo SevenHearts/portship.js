@@ -1,6 +1,7 @@
 using Kaitai;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
@@ -11,6 +12,12 @@ public class HIMImporter : ScriptedImporter
     public override void OnImportAsset(AssetImportContext ctx)
     {
         var him = RoseHim.FromFile(ctx.assetPath);
+        string planmapPath = Path.ChangeExtension(ctx.assetPath, null) + "planmap.png";
+        var planmap = AssetDatabase.LoadAssetAtPath<Texture2D>(planmapPath);
+        if (planmap == null)
+        {
+            ctx.LogImportWarning("Failed to load HIM planmap: " + planmapPath);
+        }
 
         var height = (int)him.Height - 1;
         var width = (int)him.Width - 1;
@@ -26,11 +33,12 @@ public class HIMImporter : ScriptedImporter
 
         Vector2 halfSize = size / 2;
 
-        List<Vector3> vertices = new List<Vector3>();
-        List<Vector2> uvs = new List<Vector2>();
+        var vertices = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        var colors = new List<Color>();
 
-        Vector3 vertice = Vector3.zero;
-        Vector2 uv = Vector3.zero;
+        var vertice = Vector3.zero;
+        var uv = Vector3.zero;
 
         for (int y = 0; y < height + 1; y++)
         {
@@ -46,6 +54,7 @@ public class HIMImporter : ScriptedImporter
 
                 vertices.Add(vertice);
                 uvs.Add(uv);
+                if (planmap != null) colors.Add(planmap.GetPixel(x, y));
             }
         }
 
@@ -79,6 +88,7 @@ public class HIMImporter : ScriptedImporter
         mesh.SetVertices(vertices);
         mesh.SetUVs(0, uvs);
         mesh.SetIndices(indexs, MeshTopology.Triangles, 0);
+        if (planmap != null) mesh.SetColors(colors);
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         mesh.RecalculateTangents();

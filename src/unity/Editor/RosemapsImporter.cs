@@ -38,6 +38,10 @@ public class RosemapsImporter : ScriptedImporter
         }
     }
 
+    private static string ToAssetPath(string rosePath) {
+        return "Assets/ROSE/" + Regex.Replace(rosePath.ToLower(), @"\\+", "/");
+    }
+
     public override void OnImportAsset(AssetImportContext ctx)
     {
         var stb = JsonUtility.FromJson<STB>(File.ReadAllText(ctx.assetPath));
@@ -68,15 +72,15 @@ public class RosemapsImporter : ScriptedImporter
 
                 GameObject mapObject = new GameObject(id);
 
-                string zoneFile = "Assets/ROSE/" + Regex.Replace(mapDef.designation.ToLower(), "\\\\+", "/");
+                string zoneFile = ToAssetPath(mapDef.designation);
                 ctx.DependsOnSourceAsset(zoneFile);
                 var zon = RoseZon.FromFile(zoneFile);
 
-                string objectFile = "Assets/ROSE/" + Regex.Replace(mapDef.objectTable.ToLower(), "\\\\+", "/");
+                string objectFile = ToAssetPath(mapDef.objectTable);
                 ctx.DependsOnArtifact(objectFile);
                 var objects = AssetDatabase.LoadAllAssetsAtPath(objectFile);
 
-                string constFile = "Assets/ROSE/" + Regex.Replace(mapDef.constructionTable.ToLower(), "\\\\+", "/");
+                string constFile = ToAssetPath(mapDef.constructionTable);
                 ctx.DependsOnArtifact(constFile);
                 var constructions = AssetDatabase.LoadAllAssetsAtPath(constFile);
 
@@ -103,22 +107,6 @@ public class RosemapsImporter : ScriptedImporter
                         uint objId;
                         if (!uint.TryParse(gameObj.name, out objId)) continue;
                         constructionLookup.Add(objId, gameObj);
-                    }
-                }
-
-                // Extract some of the basic info from the ZON file
-                var heightmapOffset = new Vector2();
-                foreach (var zonBlock in zon.Blocks)
-                {
-                    switch (zonBlock.Id)
-                    {
-                        case RoseZon.ZoneBlock.BlockType.BasicInfo:
-                            {
-                                var info = (RoseZon.ZoneBlock.BlockBasicInfo)zonBlock.Data;
-                                heightmapOffset.x = (float)info.XCount;
-                                heightmapOffset.y = (float)info.YCount;
-                                break;
-                            }
                     }
                 }
 
@@ -160,11 +148,51 @@ public class RosemapsImporter : ScriptedImporter
                     continue;
                 }
 
+                // Extract some of the basic info from the ZON file
+                var heightmapOffset = new Vector2();
+                var tileTextures = new List<Texture2D>();
+
+                foreach (var zonBlock in zon.Blocks)
+                {
+                    switch (zonBlock.Id)
+                    {
+                        case RoseZon.ZoneBlock.BlockType.BasicInfo:
+                            {
+                                var info = (RoseZon.ZoneBlock.BlockBasicInfo)zonBlock.Data;
+                                heightmapOffset.x = (float)info.XCount;
+                                heightmapOffset.y = (float)info.YCount;
+                                break;
+                            }
+                        case RoseZon.ZoneBlock.BlockType.TextureList:
+                            {
+                                var info = (RoseZon.ZoneBlock.BlockTextureList)zonBlock.Data;
+                                foreach (var texData in info.Textures)
+                                {
+                                    // Poorly designed file format lol.
+                                    if (texData.Data == "end") continue;
+
+                                    string texPath = Path.ChangeExtension(ToAssetPath(texData.Data), ".png");
+                                    ctx.DependsOnArtifact(texPath);
+                                    Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+                                    if (tex == null)
+                                    {
+                                        ctx.LogImportWarning("Could not find tile texture: " + texPath);
+                                    }
+                                    tileTextures.Add(tex);
+                                }
+                                break;
+                            }
+                    }
+                }
+
                 var heightMapRoot = new GameObject(mapObject.name + ".height");
                 heightMapRoot.transform.parent = mapObject.transform;
 
+                var tile_i = 0;
+
                 foreach (var tileCoord in ifoTiles.Keys)
                 {
+                    var tile_id = tile_i++;
                     var ifo = ifoTiles[tileCoord];
                     var tileObject = new GameObject(id + " " + tileCoord.x.ToString() + "_" + tileCoord.y.ToString());
 
