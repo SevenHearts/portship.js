@@ -54,7 +54,7 @@ public class HIMImporter : ScriptedImporter
 
                 vertices.Add(vertice);
                 uvs.Add(uv);
-                if (planmap != null) colors.Add(planmap.GetPixel(x, y));
+                if (planmap != null) colors.Add(planmap.GetPixel(x, (height + 1) - y));
             }
         }
 
