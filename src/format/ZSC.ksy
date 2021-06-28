@@ -108,10 +108,9 @@ types:
     seq:
       - id: effect_id
         type: u2
-      # Doesn't appear to be used anymore.
-      # - id: type
-      #   type: u2
-      #   enum: effect_type
+      - id: type
+        type: u2
+        enum: effect_type
       - id: properties
         type: mesh_prop
         repeat: until
