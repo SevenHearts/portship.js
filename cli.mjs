@@ -584,6 +584,18 @@ const compileFormat = (name, id, format = 'cpp_stl', ...exts) =>
 		lang: format
 	});
 
+const extractConvert = ninja.addRule('extract-convert', {
+	command: [
+		S`./src/extract-convert.sh`,
+		extractExe,
+		Symbol('in'),
+		Symbol('offset'),
+		Symbol('length'),
+		Symbol('out')
+	],
+	description: `Extract+DDS->PNG: $out from $in ($offset:$length)`
+});
+
 compileFormat('AIP', 'RoseAip', 'csharp', '.cs');
 compileFormat('CHR', 'RoseChr', 'csharp', '.cs');
 compileFormat('HIM', 'RoseHim', 'csharp', '.cs');
@@ -604,12 +616,15 @@ copy(
 	O`./Assets/Script/ROSE/KaitaiStruct.cs`
 );
 
-let alreadyZsc = false;
-
-for (const file of vfs.walk(/\.(zms|zsc)$/i)) {
-	if (file.filepath.match(/\.zsc$/i)) {
-		if (alreadyZsc) continue;
-		alreadyZsc = true;
+for (const file of vfs.walk(/\.(zms|zsc|dds)$/i)) {
+	if (file.filepath.endsWith('.dds')) {
+		extractConvert({
+			in: file.archive.filepath,
+			out: `./Assets/ROSE/${file.asExt('.png')}`,
+			length: file.length,
+			offset: file.offset
+		});
+		continue;
 	}
 
 	extract({
