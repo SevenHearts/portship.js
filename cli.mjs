@@ -579,8 +579,8 @@ const compileFormat_ = ninja.addRule('compile-format', {
 const compileFormat = (name, id, format = 'cpp_stl', ...exts) =>
 	compileFormat_({
 		in: S`./src/format/${name}.ksy`,
-		out: exts.map(ext => O`./Assets/Script/ROSE/Format/${id}${ext}`),
-		out_dir: O`./Assets/Script/ROSE/Format`,
+		out: exts.map(ext => O`./Assets/Editor/ROSE/Format/${id}${ext}`),
+		out_dir: O`./Assets/Editor/ROSE/Format`,
 		lang: format
 	});
 
@@ -621,11 +621,11 @@ compileFormat('ZSC', 'RoseZsc', 'csharp', '.cs');
 
 copy(
 	S`./src/kaitai_struct_csharp_runtime/KaitaiStream.cs`,
-	O`./Assets/Script/ROSE/KaitaiStream.cs`
+	O`./Assets/Editor/ROSE/KaitaiStream.cs`
 );
 copy(
 	S`./src/kaitai_struct_csharp_runtime/KaitaiStruct.cs`,
-	O`./Assets/Script/ROSE/KaitaiStruct.cs`
+	O`./Assets/Editor/ROSE/KaitaiStruct.cs`
 );
 
 for (const file of vfs.walk(/\.(zms|zsc|dds|stb|zon|ifo|him|til)$/i)) {
