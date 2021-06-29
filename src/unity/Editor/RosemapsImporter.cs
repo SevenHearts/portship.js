@@ -235,8 +235,8 @@ public class RosemapsImporter : ScriptedImporter
 
                                     foreach (var entDef in entities.Entities)
                                     {
-                                        GameObject obj = lookup[entDef.ObjId];
-                                        if (obj == null)
+                                        GameObject obj = null;
+                                        if (!lookup.TryGetValue(entDef.ObjId, out obj))
                                         {
                                             ctx.LogImportWarning(
                                                 "TIL "

@@ -62,7 +62,7 @@ public class ZCSImporter : ScriptedImporter
 
                 var id = i++;
 
-                string matName = "ROSEUnlit";
+                string matName = "ROSEMat";
 
                 if (mat.TwoSided != 0) matName += "2";	
                 if (mat.ZWriteEnabled != 0) matName += "W";	
@@ -120,8 +120,14 @@ public class ZCSImporter : ScriptedImporter
                     renderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
 
                     // TODO turn these back on when we want to try shadows :)
-                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    renderer.receiveShadows = false;
+                    //renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    //renderer.receiveShadows = false;
+                    renderer.shadowCastingMode = (
+                        (matDef.TwoSided != 0)
+                            ? UnityEngine.Rendering.ShadowCastingMode.TwoSided
+                            : UnityEngine.Rendering.ShadowCastingMode.On
+                    );
+                    renderer.receiveShadows = true;
 
                     parents[inner_id] = 0;
 
