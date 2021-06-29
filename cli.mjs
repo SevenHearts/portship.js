@@ -627,6 +627,10 @@ copy(
 	S`./src/kaitai_struct_csharp_runtime/KaitaiStruct.cs`,
 	O`./Assets/Editor/ROSE/KaitaiStruct.cs`
 );
+copy(
+	S`./src/unity/TextureImporter.preset`,
+	O`./Assets/ROSE/3ddata/maps/TextureImporter.preset`
+);
 
 for (const file of vfs.walk(/\.(zms|zsc|dds|stb|zon|ifo|him|til)$/i)) {
 	if (file.filepath.endsWith('.dds')) {
